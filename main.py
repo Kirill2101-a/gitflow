@@ -8,6 +8,8 @@ pygame.init()
 screen = pygame.display.set_mode((400, 400))
 pygame.display.set_caption("Space War")
 clock = pygame.time.Clock()
+screen_rect = screen.get_rect()
+GRAVITY = 0  # Set gravity to 0 for space environment
 
 # Загрузка изображений
 def load_image(filename):
@@ -16,6 +18,7 @@ def load_image(filename):
 
 # Загрузка шрифтов
 font = pygame.font.Font("data/PIXY.ttf", 16)  # Пиксельный шрифт
+big_font = pygame.font.Font("data/PIXY.ttf", 32)  # Большой шрифт для "Новый рекорд"
 
 # Загрузка изображений
 sound_on_img = load_image("data/sound_on.png")
@@ -25,11 +28,40 @@ space_ship_img2 = load_image("data/space_ship2.png")
 asteroid1 = load_image("data/meteor11.png")  # Маленький астероид
 shell = load_image("data/shell.png")  # Снаряд
 good_game = load_image("data/gameover.png")
+star_img = load_image("data/m4.jpg")  # Частица
 
 # Группы спрайтов
 all_sprites = pygame.sprite.Group()
 meteors = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
+
+# Класс частиц
+class Particle(pygame.sprite.Sprite):
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites)
+        size = random.randint(5, 15)
+        self.image = pygame.transform.scale(star_img, (size, size))
+        self.rect = self.image.get_rect()
+        self.velocity = [dx, dy]
+        self.rect.x, self.rect.y = pos
+        self.birth_time = pygame.time.get_ticks()
+        self.lifetime = random.randint(500, 1000)  # Время существования
+
+    def update(self):
+        self.velocity[1] += GRAVITY
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        if not self.rect.colliderect(screen_rect) or pygame.time.get_ticks() - self.birth_time > self.lifetime:
+            self.kill()
+
+# Функция создания частиц
+def create_particles(position):
+    particle_count = 20
+    numbers = range(-5, 6)
+    for _ in range(particle_count):
+        dx = random.choice(numbers)
+        dy = random.choice(numbers)
+        Particle(position, dx, dy)
 
 # Класс корабля
 class Ship(pygame.sprite.Sprite):
@@ -99,10 +131,14 @@ game_over = False
 paused = False
 sound_on = True
 ship = Ship()
+current_combo = 0  # Текущее комбо
+max_game_kombo = 0  # Максимальное комбо за игру
 
 # Настройка базы данных
-con = sqlite3.connect("pygame.sqlite")
+con = sqlite3.connect("pygame.sqlite")  # Подключаемся к базе данных pygame0
 cur = con.cursor()
+
+con.commit()
 
 # Получение лучшего и последнего результата из базы данных
 score_list = cur.execute("SELECT num FROM score").fetchall()
@@ -113,9 +149,16 @@ else:
     best_score = 0
     last_score = 0
 
+# Получение максимального комбо из таблицы kombo
+combo_list = cur.execute("SELECT num FROM kombo").fetchall()
+if combo_list:
+    max_combo = max(combo_list)[0]  # Максимальное комбо
+else:
+    max_combo = 0  # Если таблица пуста, устанавливаем комбо в 0
+
 # Игровой цикл
 def game_loop(target_score):
-    global score, game_over, paused, best_score, ship, last_score
+    global score, game_over, paused, best_score, ship, last_score, max_game_kombo, current_combo
     initialize_game(target_score)
 
     while not game_over:
@@ -127,13 +170,20 @@ def game_loop(target_score):
         render_screen()
         clock.tick(60)
 
-    last_score = score  # Сохраняем последний результат
-    update_last_score(last_score)  # Обновляем последний результат в базе данных
+    # Запись текущего счета в таблицу score
+    cur.execute("INSERT INTO score(num) VALUES (?)", (score,))
+    con.commit()
+
+    # Запись максимального комбо в таблицу kombo
+    if max_game_kombo > 0:
+        cur.execute("INSERT INTO kombo(num) VALUES (?)", (max_game_kombo,))
+        con.commit()
+
     handle_game_over()
     reset_game_state()  # Сброс состояния игры после завершения
 
 def initialize_game(target_score):
-    global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time
+    global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, current_combo, max_game_kombo
     score = 0
     paused = False
     game_over = False
@@ -143,6 +193,8 @@ def initialize_game(target_score):
     ship = Ship()
     all_sprites.add(ship)
     last_meteor_time = pygame.time.get_ticks()
+    current_combo = 0  # Сбрасываем текущее комбо
+    max_game_kombo = 0  # Сбрасываем максимальное комбо за игру
 
 def handle_events():
     global game_over, paused
@@ -162,7 +214,7 @@ def handle_events():
                 ship.shoot_start_time = pygame.time.get_ticks()  # Запуск таймера выстрела
 
 def update_game_objects(target_score):
-    global score, best_score, last_meteor_time, game_over, ship
+    global score, best_score, last_meteor_time, game_over, ship, current_combo, max_game_kombo
     current_time = pygame.time.get_ticks()
     all_sprites.update()
 
@@ -170,9 +222,20 @@ def update_game_objects(target_score):
     for bullet in bullets:
         meteor_hit = pygame.sprite.spritecollideany(bullet, meteors)
         if meteor_hit:
+            create_particles(meteor_hit.rect.center)  # Создаем частицы при уничтожении метеора
             bullet.kill()
             meteor_hit.kill()
             score += 1
+            current_combo += 1  # Увеличиваем текущее комбо
+            if current_combo > max_game_kombo:
+                max_game_kombo = current_combo  # Обновляем максимальное комбо за игру
+
+    # Проверка, улетел ли метеорит за пределы экрана
+    for meteor in meteors:
+        if meteor.rect.top > 400:
+            if current_combo > max_game_kombo:
+                max_game_kombo = current_combo  # Обновляем максимальное комбо за игру
+            current_combo = 0  # Сбрасываем текущее комбо
 
     # Создание метеоров в зависимости от целевого счета
     if current_time - last_meteor_time >= meteor_spawn_interval(target_score):
@@ -200,6 +263,19 @@ def render_screen():
     all_sprites.draw(screen)
     draw_score()
     draw_health()
+
+    # Отображение "Новый рекорд" и текущего комбо, если текущее комбо больше max_game_kombo
+    if current_combo > max_game_kombo:
+        # Надпись "Новый рекорд" большими буквами
+        record_text = big_font.render("Новый рекорд!", True, (255, 215, 0))  # Золотой цвет
+        record_rect = record_text.get_rect(center=(200, 150))  # Центр экрана по вертикали
+        screen.blit(record_text, record_rect)
+
+        # Надпись "Комбо: [текущее комбо]" меньшими буквами
+        combo_text = font.render(f"Комбо: {current_combo}", True, (255, 255, 255))  # Белый цвет
+        combo_rect = combo_text.get_rect(center=(200, 200))  # Чуть ниже "Новый рекорд"
+        screen.blit(combo_text, combo_rect)
+
     pygame.display.flip()
 
 def handle_game_over():
@@ -258,11 +334,11 @@ def health_damage(target_score):
         return 50
 
 def update_best_score(new_score):
-    cur.execute(f"INSERT INTO score(num) VALUES ({new_score})")
+    cur.execute("INSERT INTO score(num) VALUES (?)", (new_score,))
     con.commit()
 
 def update_last_score(new_score):
-    cur.execute(f"INSERT INTO score(num) VALUES ({new_score})")
+    cur.execute("INSERT INTO score(num) VALUES (?)", (new_score,))
     con.commit()
 
 def draw_score():
@@ -274,7 +350,7 @@ def draw_health():
     screen.blit(health_text, (10, 30))
 
 # Цикл меню
-def draw_menu(best_score, sound_on, last_score):
+def draw_menu(best_score, sound_on, last_score, max_combo):
     screen.fill((0, 0, 0))
     level1 = font.render("1 уровень", True, (255, 255, 255))
     level2 = font.render("2 уровень", True, (255, 255, 255))
@@ -292,8 +368,18 @@ def draw_menu(best_score, sound_on, last_score):
     last_score_text = font.render(f"Последний результат: {last_score}", True, (255, 255, 255))
     screen.blit(last_score_text, (95, 40))  # Отображение последнего результата
 
+    # Добавляем отображение максимального комбо
+    combo_text = font.render(f"Максимальное комбо: {max_combo}", True, (255, 255, 255))
+    screen.blit(combo_text, (95, 60))  # Позиция под последним результатом
+
     sound_img = sound_on_img if sound_on else sound_off_img
     screen.blit(sound_img, (330, 10))
+
+    # Добавляем подсказки по управлению
+    controls_text = font.render("Пауза: P, Стрельба: Пробел, Выход: ESC", True, (255, 255, 255))
+    controls_rect = controls_text.get_rect(center=(200, 380))  # Позиция внизу экрана
+    screen.blit(controls_text, controls_rect)
+
     pygame.display.flip()
 
 # Основной цикл
@@ -316,7 +402,7 @@ while running:
                 sound_on = not sound_on
                 print("Звук включен" if sound_on else "Звук выключен")
 
-    draw_menu(best_score, sound_on, last_score)  # Передаем last_score в draw_menu
+    draw_menu(best_score, sound_on, last_score, max_combo)  # Передаем last_score в draw_menu
     pygame.display.flip()
     clock.tick(60)
 
