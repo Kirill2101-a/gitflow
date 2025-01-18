@@ -76,7 +76,6 @@ class Ship(pygame.sprite.Sprite):
         self.shoot_start_time = 0  # Время начала выстрела
         self.invincible = False  # Флаг для неуязвимости
         self.invincible_start_time = 0  # Время начала неуязвимости
-        self.invincible_duration = 5000  # Длительность неуязвимости в миллисекундах
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -101,7 +100,7 @@ class Ship(pygame.sprite.Sprite):
         # Обработка неуязвимости
         if self.invincible:
             current_time = pygame.time.get_ticks()
-            if current_time - self.invincible_start_time >= self.invincible_duration:
+            if current_time - self.invincible_start_time >= 5000:
                 self.invincible = False
 
 # Класс пуль
@@ -209,7 +208,6 @@ def game_loop(target_score):
     # Обновление последнего результата
     last_score = score
 
-    handle_game_over()
     reset_game_state()  # Сброс состояния игры после завершения
 
 def initialize_game(target_score):
@@ -270,12 +268,14 @@ def update_game_objects(target_score):
             show_new_record = False  # Сброс флага при обнулении комбо
 
     # Проверка столкновений корабля с метеорами
-    if not ship.invincible:
-        meteor_collisions = pygame.sprite.spritecollide(ship, meteors, True)
-        for meteor in meteor_collisions:
+    meteor_collisions = pygame.sprite.spritecollide(ship, meteors, True)
+    for meteor in meteor_collisions:
+        if not ship.invincible:
             ship.health -= health_damage(target_score)
             if ship.health <= 0:
                 game_over = True
+        # Метеор уничтожается в любом случае
+        create_particles(meteor.rect.center)
 
     # Проверка сбора power-up
     power_up_collisions = pygame.sprite.spritecollide(ship, power_ups, True)
@@ -289,7 +289,7 @@ def update_game_objects(target_score):
         last_meteor_time = current_time
 
     # Создание power-up случайно
-    if random.random() < 0.001:  # 0,01% шанс каждую миллисекунду
+    if random.random() < 0.021:  # 0,01% шанс каждую миллисекунду
         PowerUp()
 
     # Обновление лучшего счета в базе данных
@@ -321,14 +321,23 @@ def render_screen():
     if show_new_record:
         draw_new_combo_record()
 
-    # Если корабль неуязвим, мигаем его
+    # Отображение плашки power-up в верхнем левом углу
     if ship.invincible:
-        if pygame.time.get_ticks() % 1000 < 500:
-            screen.blit(ship.image, ship.rect)
+        power_up_indicator = pygame.transform.scale(power_up_img, (30, 30))
+        screen.blit(power_up_indicator, (350, 30))  # Позиция в верхнем правом углу
+        current_time = pygame.time.get_ticks()
+        text = font.render(f"{((current_time - ship.invincible_start_time) // 1000)}.{(current_time - ship.invincible_start_time) % 1000}", True, (255, 255, 255))
+        screen.blit(text, (280, 30))
 
     pygame.display.flip()
 
-def handle_game_over():
+def reset_game_state():
+    global game_over, all_sprites, meteors, bullets, power_ups
+    game_over = False
+    all_sprites.empty()
+    meteors.empty()
+    bullets.empty()
+    power_ups.empty()
     # Анимация завершения игры
     end_game = pygame.sprite.Sprite()
     end_game.image = good_game
@@ -359,14 +368,6 @@ def handle_game_over():
         screen.blit(press_text, press_rect)
         pygame.display.flip()
         clock.tick(60)
-
-def reset_game_state():
-    global game_over, all_sprites, meteors, bullets, power_ups
-    game_over = False
-    all_sprites.empty()
-    meteors.empty()
-    bullets.empty()
-    power_ups.empty()
 
 def meteor_spawn_interval(target_score):
     if target_score == 100:
