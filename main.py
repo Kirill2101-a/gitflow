@@ -70,7 +70,7 @@ class Ship(pygame.sprite.Sprite):
         self.image = space_ship_img1
         self.rect = self.image.get_rect()
         self.rect.center = (200, 350)
-        self.speed = 2  # Скорость движения в пикселях за кадр
+        self.speed = 2.25  # Скорость движения в пикселях за кадр
         self.health = 100  # Здоровье корабля
         self.is_shooting = False
         self.shoot_start_time = 0  # Время начала выстрела
