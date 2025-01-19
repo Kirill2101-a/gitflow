@@ -10,6 +10,7 @@ pygame.display.set_caption("Space War")
 clock = pygame.time.Clock()
 screen_rect = screen.get_rect()
 GRAVITY = 0
+stop_time = 0
 
 # Загрузка изображений
 def load_image(filename):
@@ -76,6 +77,8 @@ class Ship(pygame.sprite.Sprite):
         self.shoot_start_time = 0  # Время начала выстрела
         self.invincible = False  # Флаг для неуязвимости
         self.invincible_start_time = 0  # Время начала неуязвимости
+        self.invincible_duration = 5000  # Длительность неуязвимости в миллисекундах
+        self.paused_duration = 0  # Время, проведенное в паузе
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -100,7 +103,7 @@ class Ship(pygame.sprite.Sprite):
         # Обработка неуязвимости
         if self.invincible:
             current_time = pygame.time.get_ticks()
-            if current_time - self.invincible_start_time >= 5000:
+            if current_time - self.invincible_start_time - self.paused_duration >= self.invincible_duration:
                 self.invincible = False
 
 # Класс пуль
@@ -162,6 +165,9 @@ combo = 0
 max_combo = 0
 show_new_record = False  # Флаг для отображения сообщения о новом рекорде комбо
 new_record_shown = False
+level_passed = False  # Флаг для отслеживания прохождения уровня
+level_passed_start_time = 0  # Время начала отображения сообщения о прохождении уровня
+level_passed_message_shown = False  # Флаг для отслеживания, было ли сообщение показано
 
 # Настройка базы данных
 con = sqlite3.connect("pygame.sqlite")  # Подключаемся к базе данных pygame0
@@ -184,7 +190,7 @@ else:
 
 # Игровой цикл
 def game_loop(target_score):
-    global score, game_over, paused, best_score, ship, last_score, combo, max_combo, show_new_record, new_record_shown
+    global score, game_over, paused, best_score, ship, last_score, combo, max_combo, show_new_record, new_record_shown, level_passed, level_passed_start_time, level_passed_message_shown
     initialize_game(target_score)
 
     while not game_over:
@@ -211,13 +217,16 @@ def game_loop(target_score):
     reset_game_state()  # Сброс состояния игры после завершения
 
 def initialize_game(target_score):
-    global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record, new_record_shown, power_ups
+    global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record, new_record_shown, power_ups, level_passed, level_passed_start_time, level_passed_message_shown
     score = 0
     combo = 0
     paused = False
     game_over = False
     show_new_record = False  # Сброс флага при инициализации игры
     new_record_shown = False  # Сброс флага, чтобы сообщение могло появиться в новой игре
+    level_passed = False  # Сброс флага прохождения уровня
+    level_passed_start_time = 0  # Сброс времени отображения сообщения
+    level_passed_message_shown = False  # Сброс флага показа сообщения
     all_sprites = pygame.sprite.Group()
     meteors = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
@@ -227,7 +236,7 @@ def initialize_game(target_score):
     last_meteor_time = pygame.time.get_ticks()
 
 def handle_events():
-    global game_over, paused
+    global game_over, paused, ship
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -237,6 +246,10 @@ def handle_events():
                 game_over = True
             elif event.key == pygame.K_p:
                 paused = not paused
+                if paused:
+                    ship.paused_duration += pygame.time.get_ticks() - ship.invincible_start_time
+                else:
+                    ship.invincible_start_time = pygame.time.get_ticks() - ship.paused_duration
             elif event.key == pygame.K_SPACE and not paused:
                 Bullet(ship.rect.left + 2, ship.rect.top)
                 Bullet(ship.rect.right - 2, ship.rect.top)
@@ -244,7 +257,7 @@ def handle_events():
                 ship.shoot_start_time = pygame.time.get_ticks()  # Запуск таймера выстрела
 
 def update_game_objects(target_score):
-    global score, best_score, last_meteor_time, game_over, ship, combo, max_combo, show_new_record, new_record_shown
+    global score, best_score, last_meteor_time, game_over, ship, combo, max_combo, show_new_record, new_record_shown, level_passed, level_passed_start_time, level_passed_message_shown
     current_time = pygame.time.get_ticks()
     all_sprites.update()
 
@@ -282,6 +295,7 @@ def update_game_objects(target_score):
     for power_up in power_up_collisions:
         ship.invincible = True
         ship.invincible_start_time = pygame.time.get_ticks()
+        ship.paused_duration = 0  # Сброс времени паузы при получении нового power-up
 
     # Создание метеоров в зависимости от целевого счета
     if current_time - last_meteor_time >= meteor_spawn_interval(target_score):
@@ -289,7 +303,7 @@ def update_game_objects(target_score):
         last_meteor_time = current_time
 
     # Создание power-up случайно
-    if random.random() < 0.021:  # 0,01% шанс каждую миллисекунду
+    if random.random() < 0.001:  # 0,01% шанс каждую миллисекунду
         PowerUp()
 
     # Обновление лучшего счета в базе данных
@@ -297,10 +311,10 @@ def update_game_objects(target_score):
         update_best_score(score)
         best_score = score
 
-    # Проверка достижения целевого счета
-    if score >= target_score:
-        game_over = True
-        update_best_score(score)
+    # Проверка достижения 100 очков на 3-м уровне
+    if target_score == 100 and score >= 100 and not level_passed:
+        level_passed = True  # Устанавливаем флаг, что уровень пройден
+        level_passed_start_time = pygame.time.get_ticks()  # Запоминаем время начала отображения сообщения
 
     # Проверка на новый рекорд комбо
     if combo > max_combo:
@@ -311,6 +325,7 @@ def update_game_objects(target_score):
             draw_new_combo_record()  # Вызываем функцию для отображения сообщения
 
 def render_screen():
+    global stop_time, level_passed_start_time, level_passed, level_passed_message_shown
     screen.fill((0, 0, 0))
     all_sprites.draw(screen)
     draw_score()
@@ -321,13 +336,23 @@ def render_screen():
     if show_new_record:
         draw_new_combo_record()
 
+    # Отображение сообщения о прохождении 3-го уровня
+    if level_passed and not level_passed_message_shown:
+        current_time = pygame.time.get_ticks()
+        if level_passed_start_time == 0:
+            level_passed_start_time = current_time  # Запоминаем время начала отображения
+
+        # Если прошло меньше 5 секунд, отображаем сообщение
+        if current_time - level_passed_start_time < 5000:  # 5000 мс = 5 секунд
+            level_passed_text = big_font.render("Вы прошли 3-й уровень!", True, (255, 255, 0))  # Желтый цвет
+            screen.blit(level_passed_text, (20, 10))  # Позиция в верхней части экрана
+        else:
+            level_passed_message_shown = True  # Сообщение было показано, больше не отображаем
+
     # Отображение плашки power-up в верхнем левом углу
     if ship.invincible:
         power_up_indicator = pygame.transform.scale(power_up_img, (30, 30))
         screen.blit(power_up_indicator, (350, 30))  # Позиция в верхнем правом углу
-        current_time = pygame.time.get_ticks()
-        text = font.render(f"{((current_time - ship.invincible_start_time) // 1000)}.{(current_time - ship.invincible_start_time) % 1000}", True, (255, 255, 255))
-        screen.blit(text, (280, 30))
 
     pygame.display.flip()
 
