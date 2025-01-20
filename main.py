@@ -3,6 +3,7 @@ import sqlite3
 import random
 
 pygame.init()
+pygame.mixer.init()
 
 # Настройка экрана
 screen = pygame.display.set_mode((400, 400))
@@ -12,10 +13,17 @@ screen_rect = screen.get_rect()
 GRAVITY = 0
 stop_time = 0
 
+
 # Загрузка изображений
 def load_image(filename):
     image = pygame.image.load(filename)
     return image.convert_alpha()
+
+
+# Загрузка фоновой музыки
+pygame.mixer.music.load("data/music.mp3")
+pygame.mixer.music.set_volume(1)
+pygame.mixer.music.play(-1)
 
 # Загрузка шрифтов
 font = pygame.font.Font("data/PIXY.ttf", 16)  # Пиксельный шрифт
@@ -37,6 +45,7 @@ meteors = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 power_ups = pygame.sprite.Group()
 
+
 # Класс частиц
 class Particle(pygame.sprite.Sprite):
     def __init__(self, pos, dx, dy):
@@ -56,6 +65,7 @@ class Particle(pygame.sprite.Sprite):
         if not self.rect.colliderect(screen_rect) or pygame.time.get_ticks() - self.birth_time > self.lifetime:
             self.kill()
 
+
 # Функция создания частиц
 def create_particles(position):
     particle_count = 20
@@ -64,6 +74,7 @@ def create_particles(position):
         dx = random.choice(numbers)
         dy = random.choice(numbers)
         Particle(position, dx, dy)
+
 
 # Класс корабля
 class Ship(pygame.sprite.Sprite):
@@ -107,6 +118,7 @@ class Ship(pygame.sprite.Sprite):
             if current_time - self.invincible_start_time - self.paused_duration >= self.invincible_duration:
                 self.invincible = False
 
+
 # Класс пуль
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -119,6 +131,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.y -= 5  # Движение вверх со скоростью 5 пикселей за кадр
         if self.rect.bottom < 0:
             self.kill()
+
 
 # Класс метеоров
 class Meteor(pygame.sprite.Sprite):
@@ -142,6 +155,7 @@ class Meteor(pygame.sprite.Sprite):
             new_record_shown = False
             self.kill()
 
+
 # Класс power-up для неуязвимости
 class PowerUp(pygame.sprite.Sprite):
     def __init__(self):
@@ -156,6 +170,7 @@ class PowerUp(pygame.sprite.Sprite):
         if self.rect.top > 400:
             self.kill()
 
+
 # Класс power-up для регенерации
 class HealthPowerUp(pygame.sprite.Sprite):
     def __init__(self):
@@ -169,6 +184,7 @@ class HealthPowerUp(pygame.sprite.Sprite):
         self.rect.y += 2  # Движение вниз с постоянной скоростью
         if self.rect.top > 400:
             self.kill()
+
 
 # Игровые переменные
 score = 0
@@ -203,6 +219,7 @@ if combo_list:
 else:
     max_combo = 0
 
+
 # Игровой цикл
 def game_loop(target_score):
     global score, game_over, paused, last_score, combo
@@ -234,6 +251,7 @@ def game_loop(target_score):
 
     reset_game_state()  # Сброс состояния игры после завершения
 
+
 def initialize_game():
     global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record, new_record_shown, power_ups, level_passed, level_passed_start_time, level_passed_message_shown
     score = 0
@@ -253,6 +271,7 @@ def initialize_game():
     all_sprites.add(ship)
     last_meteor_time = pygame.time.get_ticks()
 
+
 def handle_events():
     global game_over, paused, ship
     for event in pygame.event.get():
@@ -269,10 +288,13 @@ def handle_events():
                 else:
                     ship.invincible_start_time = pygame.time.get_ticks() - ship.paused_duration
             elif event.key == pygame.K_SPACE and not paused:
+                sound1 = pygame.mixer.Sound('data/music2.mp3')
+                sound1.play()
                 Bullet(ship.rect.left + 2, ship.rect.top)
                 Bullet(ship.rect.right - 2, ship.rect.top)
                 ship.is_shooting = True
                 ship.shoot_start_time = pygame.time.get_ticks()  # Запуск таймера выстрела
+
 
 def update_game_objects(target_score):
     global score, best_score, last_meteor_time, game_over, ship, combo, max_combo, show_new_record, new_record_shown, level_passed, level_passed_start_time, level_passed_message_shown
@@ -352,6 +374,7 @@ def update_game_objects(target_score):
             new_record_shown = True  # Устанавливаем флаг, что сообщение было показано
             draw_new_combo_record()  # Вызываем функцию для отображения сообщения
 
+
 def render_screen():
     global stop_time, level_passed_start_time, level_passed, level_passed_message_shown
     screen.fill((0, 0, 0))
@@ -383,6 +406,7 @@ def render_screen():
         screen.blit(power_up_indicator, (350, 30))  # Позиция в верхнем правом углу
 
     pygame.display.flip()
+
 
 def reset_game_state():
     global game_over, all_sprites, meteors, bullets, power_ups
@@ -422,6 +446,7 @@ def reset_game_state():
         pygame.display.flip()
         clock.tick(60)
 
+
 def meteor_spawn_interval(target_score):
     if target_score == 100:
         return 250
@@ -429,6 +454,7 @@ def meteor_spawn_interval(target_score):
         return 500
     else:
         return 1000
+
 
 def health_damage(target_score):
     if target_score <= 20 or target_score == 100000:
@@ -438,13 +464,16 @@ def health_damage(target_score):
     elif target_score == 100:
         return 50
 
+
 def update_best_score(new_score):
     cur.execute("INSERT INTO score(num) VALUES (?)", (new_score,))
     con.commit()
 
+
 def draw_score():
     score_text = font.render(f"Счёт: {score}", True, (255, 255, 255))
     screen.blit(score_text, (10, 10))
+
 
 def draw_health():
     if ship.health < 0:
@@ -452,12 +481,15 @@ def draw_health():
     health_text = font.render(f"Здоровье: {ship.health}%", True, (255, 255, 255))
     screen.blit(health_text, (10, 30))
 
+
 def draw_combo():
     combo_text = font.render(f"Комбо: {combo}", True, (255, 255, 255))
     screen.blit(combo_text, (10, 50))
 
+
 # Добавляем переменную для отслеживания времени отображения сообщения
 new_record_start_time = 0
+
 
 def draw_new_combo_record():
     global new_record_start_time, show_new_record
@@ -478,6 +510,7 @@ def draw_new_combo_record():
     combo_record_text = font.render(f"Комбо: {combo}", True, (255, 255, 0))  # Желтый цвет
     screen.blit(new_record_text, (100, 150))
     screen.blit(combo_record_text, (150, 200))
+
 
 # Цикл меню
 def draw_menu(best_score, last_score, max_combo):
@@ -507,6 +540,7 @@ def draw_menu(best_score, last_score, max_combo):
     screen.blit(controls_text, controls_rect)
 
     pygame.display.flip()
+
 
 # Основной цикл
 running = True
