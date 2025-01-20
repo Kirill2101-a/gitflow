@@ -22,7 +22,7 @@ def load_image(filename):
 
 # Загрузка фоновой музыки
 pygame.mixer.music.load("data/music.mp3")
-pygame.mixer.music.set_volume(1)
+pygame.mixer.music.set_volume(0.2)
 pygame.mixer.music.play(-1)
 
 # Загрузка шрифтов
@@ -191,6 +191,7 @@ score = 0
 last_score = 0  # Переменная для хранения последнего результата
 game_over = False
 paused = False
+sound_enabled = True
 ship = Ship()
 combo = 0
 max_combo = 0
@@ -257,7 +258,6 @@ def initialize_game():
     score = 0
     combo = 0
     paused = False
-    game_over = False
     show_new_record = False  # Сброс флага при инициализации игры
     new_record_shown = False  # Сброс флага, чтобы сообщение могло появиться в новой игре
     level_passed = False  # Сброс флага прохождения уровня
@@ -273,13 +273,21 @@ def initialize_game():
 
 
 def handle_events():
-    global game_over, paused, ship
+    global game_over, paused, ship, sound_enabled
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             quit()
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+            if event.key == pygame.K_s:
+                sound_enabled = not sound_enabled
+                if sound_enabled:
+                    pygame.mixer.music.set_volume(0.5)
+                    pygame.mixer.music.unpause()
+                else:
+                    pygame.mixer.music.set_volume(0)
+                    pygame.mixer.music.pause()
+            elif event.key == pygame.K_ESCAPE:
                 game_over = True
             elif event.key == pygame.K_p:
                 paused = not paused
@@ -288,8 +296,10 @@ def handle_events():
                 else:
                     ship.invincible_start_time = pygame.time.get_ticks() - ship.paused_duration
             elif event.key == pygame.K_SPACE and not paused:
-                sound1 = pygame.mixer.Sound('data/music2.mp3')
-                sound1.play()
+                if sound_enabled:
+                    sound1 = pygame.mixer.Sound('data/music2.mp3')
+                    sound1.set_volume(0.2)
+                    sound1.play()
                 Bullet(ship.rect.left + 2, ship.rect.top)
                 Bullet(ship.rect.right - 2, ship.rect.top)
                 ship.is_shooting = True
@@ -324,6 +334,9 @@ def update_game_objects(target_score):
     meteor_collisions = pygame.sprite.spritecollide(ship, meteors, True)
     for meteor in meteor_collisions:
         if not ship.invincible:
+            if sound_enabled:
+                sound2 = pygame.mixer.Sound('data/music3.mp3')
+                sound2.play()
             ship.health -= health_damage(target_score)
             if ship.health <= 0:
                 game_over = True
@@ -409,7 +422,7 @@ def render_screen():
 
 
 def reset_game_state():
-    global game_over, all_sprites, meteors, bullets, power_ups
+    global game_over, all_sprites, meteors, bullets, power_ups, sound_enabled
     game_over = False
     all_sprites.empty()
     meteors.empty()
@@ -439,6 +452,15 @@ def reset_game_state():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s:
+                    sound_enabled = not sound_enabled
+                    if sound_enabled:
+                        pygame.mixer.music.set_volume(0.5)
+                        pygame.mixer.music.unpause()
+                    else:
+                        pygame.mixer.music.set_volume(0)
+                        pygame.mixer.music.pause()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 waiting = False
         screen.blit(end_game.image, end_game.rect)
@@ -518,12 +540,12 @@ def draw_menu(best_score, last_score, max_combo):
     level1 = font.render("1 уровень", True, (255, 255, 255))
     level2 = font.render("2 уровень", True, (255, 255, 255))
     level3 = font.render("3 уровень", True, (255, 255, 255))
-    screen.blit(level1, (140, 80))
-    screen.blit(level2, (140, 180))
-    screen.blit(level3, (140, 280))
+    screen.blit(level1, (140, 90))
+    screen.blit(level2, (140, 160))
+    screen.blit(level3, (140, 230))
 
     arcade = font.render("Аркадный режим", True, (255, 255, 255))
-    screen.blit(arcade, (115, 350))
+    screen.blit(arcade, (120, 290))
 
     score_text = font.render(f"Лучший счет: {best_score}", True, (255, 255, 255))
     screen.blit(score_text, (120, 20))
@@ -533,6 +555,10 @@ def draw_menu(best_score, last_score, max_combo):
 
     max_combo_text = font.render(f"Максимальное комбо: {max_combo}", True, (255, 255, 255))
     screen.blit(max_combo_text, (95, 60))  # Отображение максимального комбо
+
+    sound_status = "Вкл" if sound_enabled else "Выкл"
+    sound_text = font.render(f"Звук: {sound_status} (S)", True, (255, 255, 255))
+    screen.blit(sound_text, (140, 350))  # Позиция под аркадным режимом
 
     # Добавляем подсказки по управлению
     controls_text = font.render("Пауза: P, Стрельба: Пробел, Выход: ESC", True, (255, 255, 255))
@@ -548,6 +574,15 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_s:
+                sound_enabled = not sound_enabled
+                if sound_enabled:
+                    pygame.mixer.music.set_volume(0.5)
+                    pygame.mixer.music.unpause()
+                else:
+                    pygame.mixer.music.set_volume(0)
+                    pygame.mixer.music.pause()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos
             if 140 <= x <= 260 and 80 <= y <= 120:
