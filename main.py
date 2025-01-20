@@ -29,6 +29,7 @@ shell = load_image("data/shell.png")  # Снаряд
 good_game = load_image("data/gameover.png")
 star_img = load_image("data/m4.jpg")  # Частица
 power_up_img = load_image("data/power_up.png")  # Изображение для power-up
+power_up_img_1 = load_image("data/power_up_health.png")  # Изображение для power-up
 
 # Группы спрайтов
 all_sprites = pygame.sprite.Group()
@@ -125,7 +126,7 @@ class Meteor(pygame.sprite.Sprite):
         super().__init__(all_sprites, meteors)
         self.image = asteroid1
         self.rect = self.image.get_rect()
-        self.rect.x = random.randint(0, 400)
+        self.rect.x = random.randint(0, 380)
         self.rect.y = 0
         self.target = target_score
         self.speed = random.uniform(1, 3)  # Случайная скорость от 1 до 3
@@ -146,6 +147,20 @@ class PowerUp(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(all_sprites, power_ups)
         self.image = power_up_img
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0, 400 - self.rect.width)
+        self.rect.y = 0
+
+    def update(self):
+        self.rect.y += 2  # Движение вниз с постоянной скоростью
+        if self.rect.top > 400:
+            self.kill()
+
+# Класс power-up для регенерации
+class HealthPowerUp(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__(all_sprites, power_ups)
+        self.image = power_up_img_1
         self.rect = self.image.get_rect()
         self.rect.x = random.randint(0, 400 - self.rect.width)
         self.rect.y = 0
@@ -190,11 +205,14 @@ else:
 
 # Игровой цикл
 def game_loop(target_score):
-    global score, game_over, paused, best_score, ship, last_score, combo, max_combo, show_new_record, new_record_shown, level_passed, level_passed_start_time, level_passed_message_shown
-    initialize_game(target_score)
+    global score, game_over, paused, last_score, combo
+    initialize_game()
 
     while not game_over:
         handle_events()
+        if target_score != 100:
+            if score >= target_score:
+                game_over = True
 
         if not paused:
             update_game_objects(target_score)
@@ -216,7 +234,7 @@ def game_loop(target_score):
 
     reset_game_state()  # Сброс состояния игры после завершения
 
-def initialize_game(target_score):
+def initialize_game():
     global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record, new_record_shown, power_ups, level_passed, level_passed_start_time, level_passed_message_shown
     score = 0
     combo = 0
@@ -293,9 +311,15 @@ def update_game_objects(target_score):
     # Проверка сбора power-up
     power_up_collisions = pygame.sprite.spritecollide(ship, power_ups, True)
     for power_up in power_up_collisions:
-        ship.invincible = True
-        ship.invincible_start_time = pygame.time.get_ticks()
-        ship.paused_duration = 0  # Сброс времени паузы при получении нового power-up
+        if isinstance(power_up, PowerUp):
+            ship.invincible = True
+            ship.invincible_start_time = pygame.time.get_ticks()
+            ship.paused_duration = 0
+        elif isinstance(power_up, HealthPowerUp):
+            ship.health = 100  # Восстановление здоровья до максимума
+            if ship.health > 100:  # Защита от превышения
+                ship.health = 100
+            create_particles(ship.rect.center)  # Эффект частиц
 
     # Создание метеоров в зависимости от целевого счета
     if current_time - last_meteor_time >= meteor_spawn_interval(target_score):
@@ -303,8 +327,12 @@ def update_game_objects(target_score):
         last_meteor_time = current_time
 
     # Создание power-up случайно
-    if random.random() < 0.001:  # 0,01% шанс каждую миллисекунду
-        PowerUp()
+    if random.random() < 0.001:  # 0,1% шанс каждую итерацию
+        # 50% шанс на обычный power-up, 50% на восстановление здоровья
+        if random.choice([True, False]):
+            PowerUp()
+        else:
+            HealthPowerUp()
 
     # Обновление лучшего счета в базе данных
     if score > best_score:
