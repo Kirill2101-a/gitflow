@@ -334,12 +334,12 @@ def update_game_objects(target_score):
     meteor_collisions = pygame.sprite.spritecollide(ship, meteors, True)
     for meteor in meteor_collisions:
         if not ship.invincible:
-            if sound_enabled:
-                sound2 = pygame.mixer.Sound('data/music3.mp3')
-                sound2.play()
             ship.health -= health_damage(target_score)
             if ship.health <= 0:
                 game_over = True
+        if sound_enabled:
+            sound2 = pygame.mixer.Sound('data/music3.mp3')
+            sound2.play()
         # Метеор уничтожается в любом случае
         create_particles(meteor.rect.center)
 
@@ -354,10 +354,14 @@ def update_game_objects(target_score):
             ship.health = 100  # Восстановление здоровья до максимума
             if ship.health > 100:  # Защита от превышения
                 ship.health = 100
-            create_particles(ship.rect.center)  # Эффект частиц
 
     # Создание метеоров в зависимости от целевого счета
-    if current_time - last_meteor_time >= meteor_spawn_interval(target_score):
+    interval = meteor_spawn_interval(target_score)
+    if interval == 250:
+        interval -= int(score / 2)
+        if interval < 100:
+            interval = 100
+    if current_time - last_meteor_time >= interval:
         Meteor(target_score)
         last_meteor_time = current_time
 
@@ -473,9 +477,9 @@ def meteor_spawn_interval(target_score):
     if target_score == 100:
         return 250
     elif target_score == 50:
-        return 500
+        return 400
     else:
-        return 1000
+        return 600
 
 
 def health_damage(target_score):
@@ -585,13 +589,13 @@ while running:
                     pygame.mixer.music.pause()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos
-            if 140 <= x <= 260 and 80 <= y <= 120:
+            if 140 <= x <= 260 and 90 <= y <= 130:
                 game_loop(20)  # Уровень 1
-            elif 140 <= x <= 260 and 180 <= y <= 220:
+            elif 140 <= x <= 260 and 160 <= y <= 210:
                 game_loop(50)  # Уровень 2
-            elif 140 <= x <= 260 and 280 <= y <= 320:
+            elif 140 <= x <= 260 and 230 <= y <= 280:
                 game_loop(100)  # Уровень 3
-            elif 115 <= x <= 300 and 350 <= y <= 390:
+            elif 120 <= x <= 300 and 290 <= y <= 340:
                 game_loop(100000)  # Аркадный режим
 
     draw_menu(best_score, last_score, max_combo)  # Передаем max_combo в draw_menu
