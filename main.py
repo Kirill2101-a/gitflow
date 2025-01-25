@@ -247,8 +247,7 @@ def game_loop(target_score):
         cur.execute("INSERT INTO combo(num) VALUES (?)", (combo,))
         con.commit()
 
-    # Обновление последнего результата
-    last_score = score
+    last_score = score # Обновление последнего результата
 
     reset_game_state()  # Сброс состояния игры после завершения
 
