@@ -254,7 +254,8 @@ def game_loop(target_score):
 
 
 def initialize_game():
-    global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record, new_record_shown, power_ups, level_passed, level_passed_start_time, level_passed_message_shown
+    global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record
+    global new_record_shown, power_ups, level_passed, level_passed_start_time, level_passed_message_shown
     score = 0
     combo = 0
     paused = False
@@ -307,7 +308,8 @@ def handle_events():
 
 
 def update_game_objects(target_score):
-    global score, best_score, last_meteor_time, game_over, ship, combo, max_combo, show_new_record, new_record_shown, level_passed, level_passed_start_time, level_passed_message_shown
+    global score, best_score, last_meteor_time, game_over, ship, combo, max_combo, show_new_record
+    global new_record_shown, level_passed, level_passed_start_time, level_passed_message_shown
     current_time = pygame.time.get_ticks()
     all_sprites.update()
 
