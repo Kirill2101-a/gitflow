@@ -31,20 +31,20 @@ big_font = pygame.font.Font("data/PIXY.ttf", 32)  # Большoй шрифт
 space_ship_img1 = load_image("data/space_ship1.png")
 space_ship_img2 = load_image("data/space_ship2.png")
 asteroid1 = load_image("data/meteor11.png")  # Aстероид
-shell = load_image("data/shell.png")  # Снаряд
+shell = load_image("data/shell.png")  # Снaряд
 good_game = load_image("data/gameover.png")
-star_img = load_image("data/m4.jpg")  # Частица
-power_up_img = load_image("data/power_up.png")  # Изображение для power-up
-power_up_img_1 = load_image("data/power_up_health.png")  # Изображение для power-up
+star_img = load_image("data/m4.jpg")  # Чaстица
+power_up_img = load_image("data/power_up.png")  # Изoбрaжение для pоwer-up
+power_up_img_1 = load_image("data/power_up_health.png")  # Изoбрaжение для pоwer-up
 
-# Группы спрайтов
+# Группы спрaйтов
 all_sprites = pygame.sprite.Group()
 meteors = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 power_ups = pygame.sprite.Group()
 
 
-# Класс частиц
+# Клacc чaстиц
 class Particle(pygame.sprite.Sprite):
     def __init__(self, pos, dx, dy):
         super().__init__(all_sprites)
@@ -54,7 +54,7 @@ class Particle(pygame.sprite.Sprite):
         self.vec = [dx, dy]
         self.rect.x, self.rect.y = pos
         self.birth_time = pygame.time.get_ticks()
-        self.lifetime = random.randint(500, 1000)  # Время существования
+        self.lifetime = random.randint(500, 1000)  # Время cуществования
 
     def update(self):
         self.rect.x += self.vec[0]
@@ -63,16 +63,15 @@ class Particle(pygame.sprite.Sprite):
             self.kill()
 
 
-# Класс корабля
+# Клacc кoрaбля
 class Ship(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(all_sprites)
         self.image = space_ship_img1
         self.rect = self.image.get_rect()
         self.rect.center = (200, 350)
-        self.speed = 2.25  # Скорость движения в пикселях за кадр
         self.health = 100  # Здоровье корабля
-        self.is_shooting = False
+        self.is_shoot = False
         self.shoot_start_time = 0  # Время начала выстрела
         self.invincible = False  # Флаг для неуязвимости
         self.invincible_start_time = 0  # Время начала неуязвимости
@@ -82,19 +81,19 @@ class Ship(pygame.sprite.Sprite):
     def update(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] and self.rect.left > 0:
-            self.rect.x -= self.speed
+            self.rect.x -= 2.25
         if keys[pygame.K_RIGHT] and self.rect.right < 400:
-            self.rect.x += self.speed
+            self.rect.x += 2.25
         if keys[pygame.K_UP] and self.rect.top > 0:
-            self.rect.y -= self.speed
+            self.rect.y -= 2.25
         if keys[pygame.K_DOWN] and self.rect.bottom < 400:
-            self.rect.y += self.speed
+            self.rect.y += 2.25
 
-        # Обработка анимации выстрела
-        if self.is_shooting:
+        # Обрaботка анимации выстрела
+        if self.is_shoot:
             current_time = pygame.time.get_ticks()
             if current_time - self.shoot_start_time >= 100:  # 100 мс = 0.1 секунды
-                self.is_shooting = False
+                self.is_shoot = False
                 self.image = space_ship_img1
             else:
                 self.image = space_ship_img2
@@ -153,7 +152,7 @@ class PowerUp(pygame.sprite.Sprite):
         self.rect.y = 0
 
     def update(self):
-        self.rect.y += 2  # Движение вниз с постоянной скоростью
+        self.rect.y += 2  # Движeниe вниз с пocтoянной скоростью
         if self.rect.top > 400:
             self.kill()
 
@@ -168,44 +167,10 @@ class HealthPowerUp(pygame.sprite.Sprite):
         self.rect.y = 0
 
     def update(self):
-        self.rect.y += 2  # Движение вниз с постоянной скоростью
+        self.rect.y += 2  # Движениe вниз с пocтoянной скoростью
         if self.rect.top > 400:
             self.kill()
 
-
-# Игровые переменные
-score = 0
-last_score = 0  # Переменная для хранения последнего результата
-game_over = False
-paused = False
-sound_enabled = True
-ship = Ship()
-combo = 0
-max_combo = 0
-show_new_record = False  # Флаг для отображения сообщения о новом рекорде комбо
-new_record_shown = False
-level_passed = False  # Флаг для отслеживания прохождения уровня
-level_passed_start_time = 0  # Время начала отображения сообщения о прохождении уровня
-level_passed_message_shown = False  # Флаг для отслеживания, было ли сообщение показано
-
-# Настройка базы данных
-con = sqlite3.connect("pygame.sqlite")  # Подключаемся к базе данных pygame0
-cur = con.cursor()
-
-# Получение лучшего и последнего результата из базы данных
-score_list = cur.execute("SELECT num FROM score").fetchall()
-combo_list = cur.execute("SELECT num FROM combo").fetchall()
-if score_list:
-    best_score = max(score_list)[0]
-    last_score = score_list[-1][0]  # Последний результат
-else:
-    best_score = 0
-    last_score = 0
-
-if combo_list:
-    max_combo = max(combo_list)[0]
-else:
-    max_combo = 0
 
 # Функция создания частиц
 def create_particles(position):
@@ -221,13 +186,13 @@ def game_loop(target_score):
     init_game()
 
     while not game_over:
-        handle_events()
+        H_event()
         if target_score != 100:
             if score >= target_score:
                 game_over = True
 
         if not paused:
-            update_game_objects(target_score)
+            update_game(target_score)
 
         render_screen()
         clock.tick(60)
@@ -247,26 +212,26 @@ def game_loop(target_score):
 
 
 def init_game():
-    global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record
-    global new_record_shown, power_ups, level_passed, level_passed_start_time, level_passed_message_shown
+    global score, paused, all_sprites, meteors, bullets, ship, last_meteor, combo, show_new_record
+    global new_record_shown, power_ups, level_passed, start_time, message_shown
     score = 0
     combo = 0
     paused = False
     show_new_record = False  # Сброс флага при инициализации игры
     new_record_shown = False  # Сброс флага, чтобы сообщение могло появиться в новой игре
     level_passed = False  # Сброс флага прохождения уровня
-    level_passed_start_time = 0  # Сброс времени отображения сообщения
-    level_passed_message_shown = False  # Сброс флага показа сообщения
+    start_time = 0  # Сброс времени отображения сообщения
+    message_shown = False  # Сброс флага показа сообщения
     all_sprites = pygame.sprite.Group()
     meteors = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     power_ups = pygame.sprite.Group()
     ship = Ship()
     all_sprites.add(ship)
-    last_meteor_time = pygame.time.get_ticks()
+    last_meteor = pygame.time.get_ticks()
 
 
-def handle_events():
+def H_event():
     global game_over, paused, ship, sound_enabled
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -300,9 +265,9 @@ def handle_events():
                 ship.shoot_start_time = pygame.time.get_ticks()  # Запуск таймера выстрела
 
 
-def update_game_objects(target_score):
-    global score, best_score, last_meteor_time, game_over, ship, combo, max_combo, show_new_record
-    global new_record_shown, level_passed, level_passed_start_time, level_passed_message_shown
+def update_game(target_score):
+    global score, best_score, last_meteor, game_over, ship, combo, max_combo, show_new_record
+    global new_record_shown, level_passed, start_time, message_shown
     current_time = pygame.time.get_ticks()
     all_sprites.update()
 
@@ -356,9 +321,17 @@ def update_game_objects(target_score):
         interval -= int(score / 2)
         if interval < 100:
             interval = 100
-    if current_time - last_meteor_time >= interval:
+    elif interval == 400:
+        interval -= int(score / 3)
+        if interval < 200:
+            interval = 200
+    elif interval == 600:
+        interval -= int(score / 4)
+        if interval < 300:
+            interval = 300
+    if current_time - last_meteor >= interval:
         Meteor(target_score)
-        last_meteor_time = current_time
+        last_meteor = current_time
 
     # Создание power-up случайно
     if random.random() < 0.001:  # 0,1% шанс каждую итерацию
@@ -376,7 +349,7 @@ def update_game_objects(target_score):
     # Проверка достижения 100 очков на 3-м уровне
     if target_score == 100 and score >= 100 and not level_passed:
         level_passed = True  # Устанавливаем флаг, что уровень пройден
-        level_passed_start_time = pygame.time.get_ticks()  # Запоминаем время начала отображения сообщения
+        start_time = pygame.time.get_ticks()  # Запоминаем время начала отображения сообщения
 
     # Проверка на новый рекорд комбо
     if combo > max_combo:
@@ -388,7 +361,7 @@ def update_game_objects(target_score):
 
 
 def render_screen():
-    global stop_time, level_passed_start_time, level_passed, level_passed_message_shown
+    global stop_time, start_time, level_passed, message_shown
     screen.fill((0, 0, 0))
     all_sprites.draw(screen)
     draw_score()
@@ -400,17 +373,17 @@ def render_screen():
         draw_new_combo_record()
 
     # Отображение сообщения о прохождении 3-го уровня
-    if level_passed and not level_passed_message_shown:
+    if level_passed and not message_shown:
         current_time = pygame.time.get_ticks()
-        if level_passed_start_time == 0:
-            level_passed_start_time = current_time  # Запоминаем время начала отображения
+        if start_time == 0:
+            start_time = current_time  # Запоминаем время начала отображения
 
         # Если прошло меньше 5 секунд, отображаем сообщение
-        if current_time - level_passed_start_time < 5000:  # 5000 мс = 5 секунд
+        if current_time - start_time < 5000:  # 5000 мс = 5 секунд
             level_passed_text = big_font.render("Вы прошли 3-й уровень!", True, (255, 255, 0))  # Желтый цвет
             screen.blit(level_passed_text, (20, 10))  # Позиция в верхней части экрана
         else:
-            level_passed_message_shown = True  # Сообщение было показано, больше не отображаем
+            message_shown = True  # Сообщение было показано, больше не отображаем
 
     # Отображение плашки power-up в верхнем левом углу
     if ship.invincible:
@@ -434,9 +407,7 @@ def reset_game_state():
     end_game.rect.left = -end_game.rect.width
 
     while end_game.rect.left < 0:
-        dt = clock.tick(60) / 1000
-        movement = 100 * dt
-        end_game.rect.left += movement
+        end_game.rect.left += clock.tick(60) / 10
         screen.blit(end_game.image, end_game.rect)
         pygame.display.flip()
 
@@ -508,10 +479,6 @@ def draw_combo():
     screen.blit(combo_text, (10, 50))
 
 
-# Добавляем переменную для отслеживания времени отображения сообщения
-new_record_start_time = 0
-
-
 def draw_new_combo_record():
     global new_record_start_time, show_new_record
     current_time = pygame.time.get_ticks()
@@ -543,30 +510,55 @@ def draw_menu(best_score, last_score, max_combo):
     screen.blit(level2, (140, 160))
     screen.blit(level3, (140, 230))
 
-    arcade = font.render("Аркадный режим", True, (255, 255, 255))
-    screen.blit(arcade, (120, 290))
+    text = font.render("Аркадный режим", True, (255, 255, 255))
+    screen.blit(text, (120, 290))
 
-    score_text = font.render(f"Лучший счет: {best_score}", True, (255, 255, 255))
-    screen.blit(score_text, (120, 20))
+    text = font.render(f"Лучший счет: {best_score}", True, (255, 255, 255))
+    screen.blit(text, (120, 20))
 
-    last_score_text = font.render(f"Последний результат: {last_score}", True, (255, 255, 255))
-    screen.blit(last_score_text, (95, 40))  # Отображение последнего результата
+    text = font.render(f"Последний результат: {last_score}", True, (255, 255, 255))
+    screen.blit(text, (95, 40))  # Отображение последнего результата
 
-    max_combo_text = font.render(f"Максимальное комбо: {max_combo}", True, (255, 255, 255))
-    screen.blit(max_combo_text, (95, 60))  # Отображение максимального комбо
+    text = font.render(f"Максимальное комбо: {max_combo}", True, (255, 255, 255))
+    screen.blit(text, (95, 60))  # Отображение максимального комбо
 
-    sound_status = "Вкл" if sound_enabled else "Выкл"
-    sound_text = font.render(f"Звук: {sound_status} (S)", True, (255, 255, 255))
-    screen.blit(sound_text, (140, 350))  # Позиция под аркадным режимом
+    text = font.render(f"Звук: {"Вкл" if sound_enabled else "Выкл"} (S)", True, (255, 255, 255))
+    screen.blit(text, (140, 350))  # Позиция под аркадным режимом
 
     # Добавляем подсказки по управлению
-    controls_text = font.render("Пауза: P, Стрельба: Пробел, Выход: ESC", True, (255, 255, 255))
-    controls_rect = controls_text.get_rect(center=(200, 380))  # Позиция внизу экрана
-    screen.blit(controls_text, controls_rect)
+    text = font.render("Пауза: P, Стрельба: Пробел, Выход: ESC", True, (255, 255, 255))
+    controls_rect = text.get_rect(center=(200, 380))  # Позиция внизу экрана
+    screen.blit(text, controls_rect)
 
     pygame.display.flip()
 
 if __name__ == '__main__':
+    # Игровые переменные
+    score = 0
+    game_over = False
+    paused = False
+    sound_enabled = True
+    ship = Ship()
+    combo = 0
+    show_new_record = False  # Флаг для отображения сообщения о новом рекорде комбо
+    new_record_shown = False
+    level_passed = False  # Флаг для отслеживания прохождения уровня
+    start_time = 0  # Время начала отображения сообщения о прохождении уровня
+    message_shown = False  # Флаг для отслеживания, было ли сообщение показано
+    new_record_start_time = 0  # Добавляем переменную для отслеживания времени отображения сообщения
+
+    # Настройка базы данных
+    con = sqlite3.connect("pygame.sqlite")  # Подключаемся к базе данных pygame0
+    cur = con.cursor()
+
+    # Получение лучшего и последнего результата из базы данных
+    score_list = cur.execute("SELECT num FROM score").fetchall()
+    combo_list = cur.execute("SELECT num FROM combo").fetchall()
+    best_score = max(score_list)[0]
+    last_score = score_list[-1][0]  # Последний результат
+
+    max_combo = max(combo_list)[0]
+
     # Основной цикл
     running = True
     while running:
@@ -591,9 +583,9 @@ if __name__ == '__main__':
                 elif 140 <= x <= 260 and 230 <= y <= 280:
                     game_loop(100)  # Уровень 3
                 elif 120 <= x <= 300 and 290 <= y <= 340:
-                    game_loop(100000)  # Аркадный режим
+                    game_loop(100000000)  # Аркадный режим
 
-        draw_menu(best_score, last_score, max_combo)  # Передаем max_combo в draw_menu
+        draw_menu(best_score, last_score, max_combo)  # Передаем mаx_соmbо в drаw_menu
         pygame.display.flip()
         clock.tick(60)
 
