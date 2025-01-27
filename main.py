@@ -9,8 +9,6 @@ pygame.mixer.init()
 screen = pygame.display.set_mode((400, 400))
 pygame.display.set_caption("Space War")
 clock = pygame.time.Clock()
-screen_rect = screen.get_rect()
-GRAVITY = 0
 stop_time = 0
 
 
@@ -26,13 +24,13 @@ pygame.mixer.music.set_volume(0.2)
 pygame.mixer.music.play(-1)
 
 # Загрузка шрифтов
-font = pygame.font.Font("data/PIXY.ttf", 16)  # Пиксельный шрифт
-big_font = pygame.font.Font("data/PIXY.ttf", 32)  # Большой шрифт для "Новый рекорд"
+font = pygame.font.Font("data/PIXY.ttf", 16)  # Пиксeльный шрифт
+big_font = pygame.font.Font("data/PIXY.ttf", 32)  # Большoй шрифт
 
 # Загрузка изображений
 space_ship_img1 = load_image("data/space_ship1.png")
 space_ship_img2 = load_image("data/space_ship2.png")
-asteroid1 = load_image("data/meteor11.png")  # Маленький астероид
+asteroid1 = load_image("data/meteor11.png")  # Aстероид
 shell = load_image("data/shell.png")  # Снаряд
 good_game = load_image("data/gameover.png")
 star_img = load_image("data/m4.jpg")  # Частица
@@ -53,27 +51,16 @@ class Particle(pygame.sprite.Sprite):
         size = random.randint(5, 15)
         self.image = pygame.transform.scale(star_img, (size, size))
         self.rect = self.image.get_rect()
-        self.velocity = [dx, dy]
+        self.vec = [dx, dy]
         self.rect.x, self.rect.y = pos
         self.birth_time = pygame.time.get_ticks()
         self.lifetime = random.randint(500, 1000)  # Время существования
 
     def update(self):
-        self.velocity[1] += GRAVITY
-        self.rect.x += self.velocity[0]
-        self.rect.y += self.velocity[1]
-        if not self.rect.colliderect(screen_rect) or pygame.time.get_ticks() - self.birth_time > self.lifetime:
+        self.rect.x += self.vec[0]
+        self.rect.y += self.vec[1]
+        if not self.rect.colliderect(0, 0, 400, 400) or pygame.time.get_ticks() - self.birth_time > self.lifetime:
             self.kill()
-
-
-# Функция создания частиц
-def create_particles(position):
-    particle_count = 20
-    numbers = range(-5, 6)
-    for _ in range(particle_count):
-        dx = random.choice(numbers)
-        dy = random.choice(numbers)
-        Particle(position, dx, dy)
 
 
 # Класс корабля
@@ -220,11 +207,18 @@ if combo_list:
 else:
     max_combo = 0
 
+# Функция создания частиц
+def create_particles(position):
+    for _ in range(20):
+        x = random.choice(range(-5, 6))
+        y = random.choice(range(-5, 6))
+        Particle(position, x, y)
+
 
 # Игровой цикл
 def game_loop(target_score):
     global score, game_over, paused, last_score, combo
-    initialize_game()
+    init_game()
 
     while not game_over:
         handle_events()
@@ -252,7 +246,7 @@ def game_loop(target_score):
     reset_game_state()  # Сброс состояния игры после завершения
 
 
-def initialize_game():
+def init_game():
     global score, paused, all_sprites, meteors, bullets, ship, last_meteor_time, combo, show_new_record
     global new_record_shown, power_ups, level_passed, level_passed_start_time, level_passed_message_shown
     score = 0
@@ -572,35 +566,35 @@ def draw_menu(best_score, last_score, max_combo):
 
     pygame.display.flip()
 
+if __name__ == '__main__':
+    # Основной цикл
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s:
+                    sound_enabled = not sound_enabled
+                    if sound_enabled:
+                        pygame.mixer.music.set_volume(0.5)
+                        pygame.mixer.music.unpause()
+                    else:
+                        pygame.mixer.music.set_volume(0)
+                        pygame.mixer.music.pause()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = event.pos
+                if 140 <= x <= 260 and 90 <= y <= 130:
+                    game_loop(20)  # Уровень 1
+                elif 140 <= x <= 260 and 160 <= y <= 210:
+                    game_loop(50)  # Уровень 2
+                elif 140 <= x <= 260 and 230 <= y <= 280:
+                    game_loop(100)  # Уровень 3
+                elif 120 <= x <= 300 and 290 <= y <= 340:
+                    game_loop(100000)  # Аркадный режим
 
-# Основной цикл
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_s:
-                sound_enabled = not sound_enabled
-                if sound_enabled:
-                    pygame.mixer.music.set_volume(0.5)
-                    pygame.mixer.music.unpause()
-                else:
-                    pygame.mixer.music.set_volume(0)
-                    pygame.mixer.music.pause()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = event.pos
-            if 140 <= x <= 260 and 90 <= y <= 130:
-                game_loop(20)  # Уровень 1
-            elif 140 <= x <= 260 and 160 <= y <= 210:
-                game_loop(50)  # Уровень 2
-            elif 140 <= x <= 260 and 230 <= y <= 280:
-                game_loop(100)  # Уровень 3
-            elif 120 <= x <= 300 and 290 <= y <= 340:
-                game_loop(100000)  # Аркадный режим
-
-    draw_menu(best_score, last_score, max_combo)  # Передаем max_combo в draw_menu
-    pygame.display.flip()
-    clock.tick(60)
+        draw_menu(best_score, last_score, max_combo)  # Передаем max_combo в draw_menu
+        pygame.display.flip()
+        clock.tick(60)
 
 pygame.quit()
