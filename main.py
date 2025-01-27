@@ -535,11 +535,11 @@ def draw_menu(best_score, last_score, max_combo):
 if __name__ == '__main__':
     # Игровые переменные
     score = 0
-    game_over = False
-    paused = False
-    sound_enabled = True
+    game_over = False # Окончилась ли игра
+    paused = False # Стоит ли пауза
+    sound_enabled = True # Включён ли звук
     ship = Ship()
-    combo = 0
+    combo = 0 
     show_new_record = False  # Флаг для отображения сообщения о новом рекорде комбо
     new_record_shown = False
     level_passed = False  # Флаг для отслеживания прохождения уровня
@@ -554,10 +554,10 @@ if __name__ == '__main__':
     # Получение лучшего и последнего результата из базы данных
     score_list = cur.execute("SELECT num FROM score").fetchall()
     combo_list = cur.execute("SELECT num FROM combo").fetchall()
-    best_score = max(score_list)[0]
-    last_score = score_list[-1][0]  # Последний результат
+    best_score = max(score_list)[0] # Лучший счёт
+    last_score = score_list[-1][0]  # Последний счёт
 
-    max_combo = max(combo_list)[0]
+    max_combo = max(combo_list)[0] # Максимальное комбо
 
     # Основной цикл
     running = True
