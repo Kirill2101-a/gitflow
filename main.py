@@ -180,6 +180,50 @@ def create_particles(position):
         Particle(position, x, y)
 
 
+def author():
+    author_run = True
+    while author_run:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:  # Выход при любом клике
+                author_run = False
+
+        # Заголовок
+        screen.fill((0, 0, 0))
+        title = big_font.render("О авторе", True, (255, 255, 255))
+        screen.blit(title, (120, 50))
+
+        # Отрисовка текста
+        text = font.render("Автор:", True, (255, 255, 255))
+        screen.blit(text, (100, 120))
+
+        text = font.render("Алексеев Кирилл", True, (255, 255, 255))
+        screen.blit(text, (100, 150))
+
+        text = font.render("Ученик 9 класса и", True, (255, 255, 255))
+        screen.blit(text, (100, 180))
+
+        text = font.render("Яндекс Лицея", True, (255, 255, 255))
+        screen.blit(text, (100, 210))
+
+        text = font.render("Год разработки:", True, (255, 255, 255))
+        screen.blit(text, (100, 240))
+
+        text = font.render("2024-2025", True, (255, 255, 255))
+        screen.blit(text, (100, 270))
+
+        text = font.render("Нажмите любую кнопку", True, (255, 255, 255))
+        screen.blit(text, (100, 300))
+
+        text = font.render("для возврата", True, (255, 255, 255))
+        screen.blit(text, (100, 330))
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
 # Игровой цикл
 def game_loop(target_score):
     global score, game_over, paused, last_score, combo
@@ -190,7 +234,6 @@ def game_loop(target_score):
         if target_score != 100:
             if score >= target_score:
                 game_over = True
-
         if not paused:
             update_game(target_score)
 
@@ -206,7 +249,7 @@ def game_loop(target_score):
         cur.execute("INSERT INTO combo(num) VALUES (?)", (combo,))
         con.commit()
 
-    last_score = score # Обновление последнего результата
+    last_score = score  # Обновление последнего результата
 
     reset_game_state()  # Сброс состояния игры после завершения
 
@@ -525,6 +568,9 @@ def draw_menu(best_score, last_score, max_combo):
     text = font.render(f"Звук: {"Вкл" if sound_enabled else "Выкл"} (S)", True, (255, 255, 255))
     screen.blit(text, (140, 350))  # Позиция под аркадным режимом
 
+    text = font.render(f"О Авторе", True, (255, 255, 255))
+    screen.blit(text, (300, 350))  # Позиция под аркадным режимом
+
     # Добавляем подсказки по управлению
     text = font.render("Пауза: P, Стрельба: Пробел, Выход: ESC", True, (255, 255, 255))
     controls_rect = text.get_rect(center=(200, 380))  # Позиция внизу экрана
@@ -532,14 +578,15 @@ def draw_menu(best_score, last_score, max_combo):
 
     pygame.display.flip()
 
+
 if __name__ == '__main__':
     # Игровые переменные
     score = 0
-    game_over = False # Окончилась ли игра
-    paused = False # Стоит ли пауза
-    sound_enabled = True # Включён ли звук
+    game_over = False  # Окончилась ли игра
+    paused = False  # Стоит ли пауза
+    sound_enabled = True  # Включён ли звук
     ship = Ship()
-    combo = 0 
+    combo = 0
     show_new_record = False  # Флаг для отображения сообщения о новом рекорде комбо
     new_record_shown = False
     level_passed = False  # Флаг для отслеживания прохождения уровня
@@ -554,10 +601,10 @@ if __name__ == '__main__':
     # Получение лучшего и последнего результата из базы данных
     score_list = cur.execute("SELECT num FROM score").fetchall()
     combo_list = cur.execute("SELECT num FROM combo").fetchall()
-    best_score = max(score_list)[0] # Лучший счёт
+    best_score = max(score_list)[0]  # Лучший счёт
     last_score = score_list[-1][0]  # Последний счёт
 
-    max_combo = max(combo_list)[0] # Максимальное комбо
+    max_combo = max(combo_list)[0]  # Максимальное комбо
 
     # Основной цикл
     running = True
@@ -584,6 +631,8 @@ if __name__ == '__main__':
                     game_loop(100)  # Уровень 3
                 elif 120 <= x <= 300 and 290 <= y <= 340:
                     game_loop(100000000)  # Аркадный режим
+                elif 300 <= x <= 400 and 350 <= y <= 400:
+                    author()  # O авторе
 
         draw_menu(best_score, last_score, max_combo)  # Передаем mаx_соmbо в drаw_menu
         pygame.display.flip()
