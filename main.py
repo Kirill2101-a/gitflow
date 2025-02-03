@@ -492,7 +492,7 @@ def meteor_spawn_interval(target_score):
 
 
 def health_damage(target_score):
-    if target_score <= 20 or target_score == 100000:
+    if target_score <= 20 or target_score == 100000000:
         return 25
     elif target_score == 50:
         return 35
